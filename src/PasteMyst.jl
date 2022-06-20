@@ -13,13 +13,115 @@ function getRequester(URI::String)
 	return JSON.parse(String(r.body))
 end
 
+function getRequester(URI::String, authkey::String)
+	r = HTTP.get(URI, ["Authorization"=>authkey])
+	if r.status != 200
+		return r.status
+	end
+	return JSON.parse(String(r.body))
+end
+
 # /paste (GET)
+
+function dictToPasty(pastyinfo::Dict)
+	"""
+	Converts a Dictionary to Pasty (struct).
+	"""
+	return pasty(
+		pastyinfo["_id"],
+		pastyinfo["language"],
+		pastyinfo["title"],
+		pastyinfo["code"]
+	)
+end
+
+function listToPastiesList(pasties::Vector)
+	"""
+	Convert a List of Pasty (Dictionary) to a List of Pasty (struct).
+	"""
+	out::Vector{pasty} = []
+	foreach(i -> out = append!(out, [dictToPasty(i)]), pasties)
+	return out
+end
+
+function dictToEdit(editinfo::Dict)
+	"""
+	Converts a Dictionary to Pasty (struct).
+	"""
+	return edit(
+		editinfo["_id"],
+		editinfo["editId"],
+		editinfo["editType"],
+		editinfo["metadata"],
+		editinfo["edit"],
+		editinfo["editedAt"]
+	)
+end
+
+function listToEditList(edits::Vector)
+	"""
+	Convert a List of Pasty (Dictionary) to a List of Pasty (struct).
+	"""
+	out::Vector{edit} = []
+	foreach(i -> out = append!(out, [dictToEdit(i)]), edits)
+	return out
+end
+
+function dictToPaste(pasteinfo::Dict)
+	"""
+	Converts a Dicitionary into a paste struct.
+	"""
+	return paste(
+		pasteinfo["_id"],
+		pasteinfo["ownerId"],
+		pasteinfo["title"],
+		pasteinfo["createdAt"],
+		pasteinfo["expiresIn"],
+		pasteinfo["deletesAt"],
+		pasteinfo["stars"],
+		pasteinfo["isPrivate"],
+		pasteinfo["isPublic"],
+		pasteinfo["encrypted"],
+		pasteinfo["tags"],
+		listToPastiesList(pasteinfo["pasties"]),
+		listToEditList(pasteinfo["edits"]),
+	)
+end
 
 function getPaste(pasteID::String)
 	"""
-	Get a Paste from the ID specified.
+	Get a Paste from the ID specified. (without authorization header)
 	"""
-	return getRequester(string("https://paste.myst.rs/api/v2/paste/", pasteID))
+	return dictToPaste(getRequester(string("https://paste.myst.rs/api/v2/paste/", pasteID)))
+end
+
+function getPaste(pasteID::String, authkey::String)
+	"""
+	Get a Paste from the ID specified. (with authorization header)
+	"""
+	return dictToPaste(getRequester(string("https://paste.myst.rs/api/v2/paste/", pasteID), authkey))
+end
+
+function pasteExist(pasteID::String)
+	"""
+	Get a paste then check If it exist. (without authorization header)
+	"""
+	r = HTTP.get(string("https://paste.myst.rs/api/v2/paste/", pasteID))
+	if r.status != 200
+		return false
+	end
+	return true
+end
+
+function pasteExist(pasteID::String, authkey::String)
+	"""
+	Get a paste then check If it exist. (with authorization header)
+	"""
+	r = HTTP.get(string("https://paste.myst.rs/api/v2/paste/", pasteID), ["Authorization"=>authkey])
+	if r.status != 200
+		return false
+	end
+	return true
 end
 
 # /data (GET)
@@ -39,6 +141,11 @@ function getLanguageInfoByName(name::String)
 	return getRequester(string("https://paste.myst.rs/api/v2/data/language?name=", name))
 end
 
+function getActivePastes()
+	""""""
+	return getRequester("https://paste.myst.rs/api/v2/data/numPastes")["numPastes"]
+end
+
 # /time (GET)
 
 function expiresInToEpoch(createdAt::UInt64, expiresIn::String)
@@ -50,7 +157,7 @@ end
 
 # /user (GET)
 
-function isUserExist(username::String)
+function userExist(username::String)
 	"""
 	Check If a User exist.
 	This method returns boolean. 
@@ -85,7 +192,7 @@ function getCurrentUserInfo(authkey::String)
 	return JSON.parse(String(r.body))
 end
 
-function getUserPastes(authkey::String)
+function getCurrentUserPastes(authkey::String)
 	"""
 	Get the List of all Pastes the user provided has created.
 	Note that the User must provide as an API key.
@@ -153,70 +260,6 @@ function createPaste(createInfo::PastyCreateInfo)
 	return JSON.parse(String(r.body))
 end
 
-function dictToPasty(pastyinfo::Dict)
-	"""
-	Converts a Dictionary to Pasty (struct).
-	"""
-	return pasty(
-		pastyinfo["_id"],
-		pastyinfo["language"],
-		pastyinfo["title"],
-		pastyinfo["code"]
-	)
-end
-
-function listToPastiesList(pasties::Vector)
-	"""
-	Convert a List of Pasty (Dictionary) to a List of Pasty (struct).
-	"""
-	out::Vector{pasty} = []
-	foreach(i -> out = append!(out, [dictToPasty(i)]), pasties)
-	return out
-end
-
-function dictToEdit(editinfo::Dict)
-	"""
-	Converts a Dictionary to Pasty (struct).
-	"""
-	return edit(
-		editinfo["_id"],
-		editinfo["editId"],
-		editinfo["editType"],
-		editinfo["metadata"],
-		editinfo["edit"],
-		editinfo["editedAt"]
-	)
-end
-
-function listToEditList(edits::Vector)
-	"""
-	Convert a List of Pasty (Dictionary) to a List of Pasty (struct).
-	"""
-	out::Vector{edit} = []
-	foreach(i -> out = append!(out, [dictToEdit(i)]), edits)
-	return out
-end
-
-function dictToPaste(pasteinfo::Dict)
-	"""
-	Converts a Dicitionary into a paste struct.
-	"""
-	return paste(
-		pasteinfo["_id"],
-		pasteinfo["ownerId"],
-		pasteinfo["title"],
-		pasteinfo["createdAt"],
-		pasteinfo["expiresIn"],
-		pasteinfo["deletesAt"],
-		pasteinfo["stars"],
-		pasteinfo["isPrivate"],
-		pasteinfo["isPublic"],
-		pasteinfo["encrypted"],
-		pasteinfo["tags"],
-		listToPastiesList(pasteinfo["pasties"]),
-		listToEditList(pasteinfo["edits"]),
-	)
-end
 
 function createPaste(createInfo::PasteCreateInfo, authkey::String)
 	"""
@@ -336,6 +379,13 @@ function editPaste(authkey::String, pasteid::String, pasteinfo::pasteEditInfo)
 		return r.status
 	end
 	return dictToPaste(JSON.parse(String(r.body)))
+end
+
+function editPaste(authkey::String, pasteid::String, pasteinfo::paste)
+	"""
+	This is an Overload method for the above method for passing in the paste object directly into the function.
+	"""
+	return editPaste(authkey, pasteid, String(pasteToPasteEditInfo(pasteinfo)))
 end
 
 end
