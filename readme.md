@@ -1,2 +1,2 @@
-# Pastemyst.jl
-Pastemyst API Wrapper for Julia.
+# PasteMyst.jl
+PasteMyst API Wrapper for Julia.
