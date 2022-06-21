@@ -7,7 +7,7 @@ end
 
 struct edit
 	_id::String
-	editId::Number
+	editId::String
 	editType::Number
 	metadata::Vector{String}
 	edit::String
@@ -32,7 +32,6 @@ mutable struct paste
 	stars::UInt64
 	isPrivate::Bool
 	isPublic::Bool
-	encrypted::Bool
 	tags::Vector{String}
 	pasties::Vector{pasty}
 	edits::Vector{edit}
